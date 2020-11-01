@@ -33,9 +33,11 @@ It all maps out like this:
 Fourtunes features multiple pages/modes, but the controls all tend to follow the same pattern.
 
 K1 - hold to shift
+
 K2 and K3 - functions always displayed at the bottom of the selected page.
 
 E1 - select current track
+
 K1 + E1 - select current page/mode
 
 E2 and E3 - change whichever parameter(s) are displayed on the left and right side of the main
