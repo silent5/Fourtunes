@@ -1,4 +1,4 @@
--- fourtunes v 1.0
+-- fourtunes v 1.0.1
 --
 -- A 4-track polyphonic step 
 -- sequencer with a polysynth 
@@ -395,6 +395,9 @@ function stop()
 end
 
 function midi_input_rec_handler(data)
+  local playEngine = params:get("track_"..currtrack.."_output") ~= 2
+  local playMidi = params:get("track_"..currtrack.."_output") <= 2
+  
   d = midi.to_msg(data)
   
   if recording then
@@ -402,11 +405,15 @@ function midi_input_rec_handler(data)
       newRecNote = true
       noteCount = noteCount + 1
       table.insert(newNotes, {d.note, 100})
-      engine.noteOn(d.note, mu.note_num_to_freq(d.note), 127)
+      if playEngine then
+        engine.noteOn(d.note, mu.note_num_to_freq(d.note), 127)
+      end
     end
     if d.type == "note_off" then
       noteCount = noteCount - 1
-      engine.noteOff(d.note)
+      if playEngine then
+        engine.noteOff(d.note)
+      end
     end
     if d.type == "note_off" and noteCount == 0 then
       if recMode == 1 then
@@ -424,35 +431,52 @@ function midi_input_rec_handler(data)
       newNotes = {}
       tracks[currtrack].length = #tracks[currtrack].seq
       tracks[currtrack].newRecording = false
-      engine.noteOff(d.note)
+      if playEngine then
+        engine.noteOff(d.note)
+      end
     end
     --echo midi input
-    m_out:send(data)
+    if playMidi then 
+      m_out:send(data)
+    end
   
   elseif editing and (#tracks[currtrack].seq > 0) then
     if d.type == "note_on" then
       noteCount = noteCount + 1
       table.insert(newNotes, {d.note, 100})
-      engine.noteOn(d.note, mu.note_num_to_freq(d.note), 127)
+      if playEngine then 
+        engine.noteOn(d.note, mu.note_num_to_freq(d.note), 127)
+      end
     end
     if d.type == "note_off" then
       noteCount = noteCount - 1
-      engine.noteOff(d.note)
+      if playEngine then
+        engine.noteOff(d.note)
+      end
     end
     if d.type == "note_off" and noteCount == 0 then
       tracks[currtrack].seq[tracks[currtrack].seqIdx].notes = newNotes
-      engine.noteOff(d.note)
+      if playEngine then 
+        engine.noteOff(d.note)
+      end
       clock.run(flash_message, "edit")
       newNotes = {}
     end
     --echo midi input
-    m_out:send(data)
+    if playMidi then
+      m_out:send(data)
+    end
   
-  else    
-    if d.type == "note_on" then
-      engine.noteOn(d.note, mu.note_num_to_freq(d.note), 127)
-    elseif d.type == "note_off" then
-      engine.noteOff(d.note)
+  else
+    if playMidi then
+      m_out:send(data)
+    end
+    if playEngine then
+      if d.type == "note_on" then
+        engine.noteOn(d.note, mu.note_num_to_freq(d.note), 127)
+      elseif d.type == "note_off" then
+        engine.noteOff(d.note)
+      end
     end
   end
    
@@ -665,7 +689,7 @@ function key(n, z)
     if n == 2 and z == 1 then
       if shift then
         pageParamSel[pageMode] = pageParamSel[pageMode] - 1
-        if paramSel <= 0 then
+        if pageParamSel[pageMode] <= 0 then  
           pageParamSel[pageMode] = pages[pageMode].paramGroups
         end
       else
@@ -781,7 +805,9 @@ function enc(n, d)
         nextpattern = currpattern
       end
     else
-      currtrack = util.clamp(currtrack + d, 1, 4)
+      if pageMode < 6 then 
+        currtrack = util.clamp(currtrack + d, 1, 4)
+      end
     end
   elseif pageMode == 1 then
     enc_edit_handler(n,d)
